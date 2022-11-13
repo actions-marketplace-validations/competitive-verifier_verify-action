@@ -69,13 +69,11 @@ jobs:
           result-artifact-prefix: split2
           result-file-name: result.json
           split-size: 2
-          split-index: 1
+          split-index: "01"
       - name: Test split-1
         run: |
           [ "${{ steps.verify-success-split-1.outputs.is-success }}"  = "true" ]
           [ $(jq '.files|length' "$RUNNER_TEMP/result.json") = 2 ]
-
-
 
       - name: Verify success split-over
         id: verify-success-split-over

@@ -5,14 +5,6 @@ branding:
   color: blue
   icon: zap
 inputs:
-  result-artifact-prefix:
-    description: The name of artifact which contains verify result json.
-    required: false
-    default: ${{ runner.os }}-competitive-verifier-result
-  result-file-name:
-    description: "Result json file name."
-    required: false
-    default: "competitive-verifier-result.json"
   split-size:
     description: "Size of split. Argument of oj-resolve --split."
     required: false
@@ -26,6 +18,14 @@ inputs:
     required: false
     default: "true"
 
+  result-artifact-prefix:
+    description: The name of artifact which contains verify result json.
+    required: false
+    default: ${{ runner.os }}-competitive-verifier-result
+  result-file-name:
+    description: "Result json file name."
+    required: false
+    default: "competitive-verifier-result.json"
   retention-days:
     description: "Duration after which artifact will expire in days."
     required: false
@@ -108,19 +108,27 @@ runs:
         ARTIFACT_JSON_PATH: ${{ runner.temp }}/verify/${{ inputs.verify-files-name }}
 
     - name: Validate input
-      shell: bash
+      shell: python
       id: validate
       run: |
-        if [ "$SPLIT_SIZE" = "" ]; then
-          echo "split=" >> $GITHUB_OUTPUT
-        elif [ $(( 0 <= $SPLIT_INDEX )) = 1 ] && [ $(( $SPLIT_INDEX < $SPLIT_SIZE )) = 1 ]; then
-          echo "split<<EOL" >> $GITHUB_OUTPUT
-          echo "--split $SPLIT_SIZE --split-index $SPLIT_INDEX" >> $GITHUB_OUTPUT
-          echo "EOL" >> $GITHUB_OUTPUT
-        else
-          echo "Invalid split"
-          exit 1
-        fi
+        import os
+
+        GITHUB_OUTPUT = os.getenv("GITHUB_OUTPUT")
+        SPLIT_SIZE = os.getenv("SPLIT_SIZE")
+        SPLIT_INDEX = os.getenv("SPLIT_INDEX")
+
+        assert GITHUB_OUTPUT is not None
+
+        with open(GITHUB_OUTPUT, mode="a", encoding='utf-8') as fp:
+            if not SPLIT_SIZE:
+                fp.write("split=\n")
+            elif 0 <= int(SPLIT_INDEX) < int(SPLIT_SIZE):
+                fp.write("split<<EOL\n")
+                fp.write(f"--split {SPLIT_SIZE} --split-index {SPLIT_INDEX}\n")
+                fp.write("EOL\n")
+            else:
+                raise Exception("Invalid input")
+
       env:
         SPLIT_SIZE: ${{ inputs.split-size }}
         SPLIT_INDEX: ${{ inputs.split-index }}
