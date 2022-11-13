@@ -81,7 +81,7 @@ jobs:
         with:
           local-verify-files-path: tests/success.json
           write-summary: true
-          result-artifact-prefix: split5
+          result-artifact-prefix: split10
           result-file-name: result.json
           split-size: 10
           split-index: 4
