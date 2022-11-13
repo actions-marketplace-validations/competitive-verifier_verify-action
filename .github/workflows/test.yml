@@ -22,12 +22,13 @@ jobs:
           local-verify-files-path: tests/success.json
           install: true
           cache-pip: true
-          write-summary: true
+          write-summary: false
           result-artifact-prefix: success
           result-file-name: result.json
 
       - name: Test success
         run: |
+          [ $(wc -c < "$GITHUB_STEP_SUMMARY") = 0 ]
           [ "${{ steps.verify-success.outputs.is-success }}"  = "true" ]
           [ $(jq '.files|length' "$RUNNER_TEMP/result.json") = 4 ]
 
@@ -42,6 +43,7 @@ jobs:
 
       - name: Test failure
         run: |
+          [ $(wc -c < "$GITHUB_STEP_SUMMARY") > 0 ]
           [ "${{ steps.verify-failure.outputs.is-success }}"  = "false" ]
           [ $(jq '.files|length' "$RUNNER_TEMP/result.json") = 1 ]
 
