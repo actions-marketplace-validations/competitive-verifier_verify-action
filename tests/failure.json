@@ -1,7 +1,7 @@
 {
     "$schema": "https://raw.githubusercontent.com/competitive-verifier/competitive-verifier/main/schema/verify_files.schema.json",
     "files": {
-        "verify_files.json": {
+        "dummy1.txt": {
             "dependencies": [],
             "verification": {
                 "type": "command",
