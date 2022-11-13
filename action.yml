@@ -114,6 +114,7 @@ runs:
         import os
 
         GITHUB_OUTPUT = os.getenv("GITHUB_OUTPUT")
+        ARTIFACT_PREFIX = os.getenv("ARTIFACT_PREFIX")
         SPLIT_SIZE = os.getenv("SPLIT_SIZE")
         SPLIT_INDEX = os.getenv("SPLIT_INDEX")
 
@@ -122,14 +123,18 @@ runs:
         with open(GITHUB_OUTPUT, mode="a", encoding='utf-8') as fp:
             if not SPLIT_SIZE:
                 fp.write("split=\n")
+                fp.write(f"result-artifact-name={ARTIFACT_PREFIX}\n")
             elif 0 <= int(SPLIT_INDEX) < int(SPLIT_SIZE):
+                index_zfilled = SPLIT_INDEX.zfill(len(SPLIT_SIZE))
                 fp.write("split<<EOL\n")
                 fp.write(f"--split {SPLIT_SIZE} --split-index {SPLIT_INDEX}\n")
                 fp.write("EOL\n")
+                fp.write(f"result-artifact-name={ARTIFACT_PREFIX}-{index_zfilled}\n")
             else:
                 raise Exception("Invalid input")
 
       env:
+        ARTIFACT_PREFIX: ${{ inputs.result-artifact-prefix }}
         SPLIT_SIZE: ${{ inputs.split-size }}
         SPLIT_INDEX: ${{ inputs.split-index }}
 
@@ -150,6 +155,6 @@ runs:
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ inputs.result-artifact-prefix }}-${{ inputs.split-index }}
+        name: ${{ steps.validate.outputs.result-artifact-name }}
         path: ${{ runner.temp }}/${{ inputs.result-file-name }}
         retention-days: ${{ inputs.retention-days }}
