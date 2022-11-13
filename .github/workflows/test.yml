@@ -29,6 +29,7 @@ jobs:
       - name: Test success
         run: |
           [ $(wc -c < "$GITHUB_STEP_SUMMARY") = 0 ]
+          rm $GITHUB_STEP_SUMMARY
           [ "${{ steps.verify-success.outputs.is-success }}"  = "true" ]
           [ $(jq '.files|length' "$RUNNER_TEMP/result.json") = 4 ]
 
@@ -44,6 +45,7 @@ jobs:
       - name: Test failure
         run: |
           [ $(wc -c < "$GITHUB_STEP_SUMMARY") > 0 ]
+          rm $GITHUB_STEP_SUMMARY
           [ "${{ steps.verify-failure.outputs.is-success }}"  = "false" ]
           [ $(jq '.files|length' "$RUNNER_TEMP/result.json") = 1 ]
 
@@ -52,13 +54,14 @@ jobs:
         uses: ./
         with:
           local-verify-files-path: tests/success.json
-          write-summary: true
           result-artifact-prefix: split2
           result-file-name: result.json
           split-size: 2
           split-index: 0
       - name: Test split-0
         run: |
+          [ $(wc -c < "$GITHUB_STEP_SUMMARY") = 0 ]
+          rm $GITHUB_STEP_SUMMARY
           [ "${{ steps.verify-success-split-0.outputs.is-success }}"  = "true" ]
           [ $(jq '.files|length' "$RUNNER_TEMP/result.json") = 2 ]
 
@@ -74,6 +77,8 @@ jobs:
           split-index: "01"
       - name: Test split-1
         run: |
+          [ $(wc -c < "$GITHUB_STEP_SUMMARY") > 0 ]
+          rm $GITHUB_STEP_SUMMARY
           [ "${{ steps.verify-success-split-1.outputs.is-success }}"  = "true" ]
           [ $(jq '.files|length' "$RUNNER_TEMP/result.json") = 2 ]
 
@@ -89,5 +94,7 @@ jobs:
           split-index: 4
       - name: Test split-over
         run: |
+          [ $(wc -c < "$GITHUB_STEP_SUMMARY") > 0 ]
+          rm $GITHUB_STEP_SUMMARY
           [ "${{ steps.verify-success-split-over.outputs.is-success }}"  = "true" ]
           [ $(jq '.files|length' "$RUNNER_TEMP/result.json") = 0 ]

@@ -16,7 +16,7 @@ inputs:
   write-summary:
     description: If true, show GitHub Actions Summary
     required: false
-    default: "true"
+    default: "false"
 
   result-artifact-prefix:
     description: The name of artifact which contains verify result json.
