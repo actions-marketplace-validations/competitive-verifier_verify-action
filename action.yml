@@ -1,0 +1,147 @@
+name: "competitive-verifier verify"
+description: "A composite action that competitive-verifier verify"
+author: "Kzrnm"
+branding:
+  color: blue
+  icon: zap
+inputs:
+  result-artifact-prefix:
+    description: The name of artifact which contains verify result json.
+    required: false
+    default: ${{ runner.os }}-competitive-verifier-result
+  result-file-name:
+    description: "Result json file name."
+    required: false
+    default: "competitive-verifier-result.json"
+  split-size:
+    description: "Size of split. Argument of oj-resolve --split."
+    required: false
+    default: ""
+  split-index:
+    description: "Argument of oj-resolve --split-index."
+    required: false
+    default: ""
+  write-summary:
+    description: If true, show GitHub Actions Summary
+    required: false
+    default: "true"
+
+  retention-days:
+    description: "Duration after which artifact will expire in days."
+    required: false
+    default: "1"
+
+  local-verify-files-path:
+    description: "The file path of verify files json."
+    required: false
+    default: ""
+  verify-files-name:
+    description: "The file name of verify files json in artifact."
+    required: false
+    default: "verify-files.json"
+  verify-files-artifact-name:
+    description: The name of artifact which contains verify files json.
+    required: false
+    default: ${{ runner.os }}-verify-files-json
+  install:
+    description: "If true, run `pip install competitive-verifier`"
+    required: false
+    default: "false"
+  cache-pip:
+    description: "If true, cache pip"
+    required: false
+    default: "false"
+outputs:
+  is-success:
+    description: "Result boolean of `competitive-verifier verify`."
+    value: ${{ steps.verify.outputs.success }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      if: fromJson(inputs.install)
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.9"
+
+    - uses: actions/cache@v3
+      if: startsWith(runner.os, 'Linux') && fromJson(inputs.cache-pip)
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-competitive-verifier-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-pip-competitive-verifier-
+    - uses: actions/cache@v3
+      if: startsWith(runner.os, 'macOS') && fromJson(inputs.cache-pip)
+      with:
+        path: ~/Library/Caches/pip
+        key: ${{ runner.os }}-pip-competitive-verifier-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-pip-competitive-verifier-
+    - uses: actions/cache@v3
+      if: startsWith(runner.os, 'Windows') && fromJson(inputs.cache-pip)
+      with:
+        path: ~\AppData\Local\pip\Cache
+        key: ${{ runner.os }}-pip-competitive-verifier-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-pip-competitive-verifier-
+
+    - name: Install competitive-verifier
+      shell: bash
+      if: fromJson(inputs.install)
+      run: pip install git+https://github.com/competitive-verifier/competitive-verifier.git@main
+
+    - name: Download verify files json
+      if: inputs.local-verify-files-path == ''
+      uses: actions/download-artifact@v3
+      with:
+        name: ${{ inputs.verify-files-artifact-name }}
+        path: ${{ runner.temp }}/verify
+    - name: Set $COMPETITIVE_VERIFY_FILES_PATH
+      shell: bash
+      run: |
+        JSON_PATH="${{ inputs.local-verify-files-path }}"
+        echo ${JSON_PATH:=$ARTIFACT_JSON_PATH}
+        echo "COMPETITIVE_VERIFY_FILES_PATH=$JSON_PATH" >> $GITHUB_ENV
+      env:
+        ARTIFACT_JSON_PATH: ${{ runner.temp }}/verify/${{ inputs.verify-files-name }}
+
+    - name: Validate input
+      shell: bash
+      id: validate
+      run: |
+        if [ "$SPLIT_SIZE" = "" ]; then
+          echo "split=" >> $GITHUB_OUTPUT
+        elif [ $(( 0 <= $SPLIT_INDEX )) = 1 ] && [ $(( $SPLIT_INDEX < $SPLIT_SIZE )) = 1 ]; then
+          echo "split<<EOL" >> $GITHUB_OUTPUT
+          echo "--split $SPLIT_SIZE --split-index $SPLIT_INDEX" >> $GITHUB_OUTPUT
+          echo "EOL" >> $GITHUB_OUTPUT
+        else
+          echo "Invalid split"
+          exit 1
+        fi
+      env:
+        SPLIT_SIZE: ${{ inputs.split-size }}
+        SPLIT_INDEX: ${{ inputs.split-index }}
+
+    - name: Run verify
+      shell: bash
+      id: verify
+      run: |
+        if competitive-verifier verify --check-error $SPLIT $SUMMARY --output "$RESULT_FILE" ; then
+          echo "success=true" >> $GITHUB_OUTPUT
+        else
+          echo "success=false" >> $GITHUB_OUTPUT
+        fi
+      env:
+        RESULT_FILE: ${{ runner.temp }}/${{ inputs.result-file-name }}
+        SPLIT: ${{ steps.validate.outputs.split }}
+        SUMMARY: ${{ (fromJson(inputs.write-summary) && '--write-summary') || '' }}
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.result-artifact-prefix }}-${{ inputs.split-index }}
+        path: ${{ runner.temp }}/${{ inputs.result-file-name }}
+        retention-days: ${{ inputs.retention-days }}

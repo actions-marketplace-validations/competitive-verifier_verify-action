@@ -1,0 +1,39 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Verify success
+        id: verify-success
+        uses: ./
+        with:
+          local-verify-files-path: tests/success.json
+          install: true
+          cache-pip: true
+          write-summary: true
+          result-artifact-prefix: success
+
+      - name: Verify failure
+        id: verify-failure
+        uses: ./
+        with:
+          local-verify-files-path: tests/failure.json
+          write-summary: true
+          result-artifact-prefix: failure
+
+      - name: Test
+        run: |
+          [ "${{ steps.verify-success.outputs.is-success }}"  = "true" ]
+          [ "${{ steps.verify-failure.outputs.is-success }}"  = "false" ]
