@@ -15,16 +15,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Set up competitive-verifier
+        uses: competitive-verifier/setup-competitive-verifier@v1
+        with:
+          python-version: "3.9"
+
       - name: Verify success
         id: verify-success
         uses: ./
         with:
-          local-verify-files-path: tests/success.json
-          install: true
-          cache-pip: true
-          write-summary: false
-          result-artifact-prefix: success
-          result-file-name: result.json
+          verify-files: tests/success.json
+          timeout: 10
+          tle: 1
+          destination: ${{runner.temp}}/result.json
+          verbose: true
 
       - name: Test success
         run: |
@@ -37,10 +41,8 @@ jobs:
         id: verify-failure
         uses: ./
         with:
-          local-verify-files-path: tests/failure.json
-          write-summary: true
-          result-artifact-prefix: failure
-          result-file-name: result.json
+          verify-files: tests/failure.json
+          destination: ${{runner.temp}}/result.json
 
       - name: Test failure
         run: |
@@ -53,9 +55,8 @@ jobs:
         id: verify-success-split-0
         uses: ./
         with:
-          local-verify-files-path: tests/success.json
-          result-artifact-prefix: split2
-          result-file-name: result.json
+          verify-files: tests/success.json
+          destination: ${{runner.temp}}/result.json
           split-size: 2
           split-index: 0
       - name: Test split-0
@@ -69,10 +70,9 @@ jobs:
         id: verify-success-split-1
         uses: ./
         with:
-          local-verify-files-path: tests/success.json
+          verify-files: tests/success.json
           write-summary: true
-          result-artifact-prefix: split2
-          result-file-name: result.json
+          destination: ${{runner.temp}}/result.json
           split-size: 2
           split-index: "01"
       - name: Test split-1
@@ -86,10 +86,9 @@ jobs:
         id: verify-success-split-over
         uses: ./
         with:
-          local-verify-files-path: tests/success.json
+          verify-files: tests/success.json
           write-summary: true
-          result-artifact-prefix: split10
-          result-file-name: result.json
+          destination: ${{runner.temp}}/result.json
           split-size: 10
           split-index: 4
       - name: Test split-over
